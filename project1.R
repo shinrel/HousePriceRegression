@@ -1,4 +1,7 @@
-data <- read.csv('train.csv', sep = ',', header = TRUE)
+require(dplyr)
+
+HP.train <- read.csv('train.csv', sep = ',', header = TRUE)
+HP.test <- read.csv('test.csv', sep = ',', header = TRUE)
 
 check_missing_values <- function(dataSet)
 {
@@ -10,29 +13,61 @@ check_missing_values <- function(dataSet)
     }
   }
 }
-deal_missing_values <- function(dataSet)
+
+
+deal_missing_values <- function(dataSet, type = 1)
 {
-  for(i in 1:ncol(dataSet)){
-    if (is.numeric(dataSet[,i])) {
-      dataSet[is.na(dataSet[,i]), i] <- round(mean(dataSet[,i], na.rm = TRUE),0)
+  # type is the replace method for numeric values. 
+  #if type = 1 --> using mean to replace.
+  #if type = 2 --> using median to replace.
+  dataSet[] <- lapply(dataSet, function(x){
+    # check if variables have a factor:
+    if(!is.factor(x)) {
+      #replace NA by mean
+      if (type == 1) x[is.na(x)] <- mean(x, na.rm = TRUE) 
+      else if (type == 2) if (type == 1) x[is.na(x)] <- median(x, na.rm = TRUE) 
     }
-  }
-  
-  #replace missing value for categorial predictors here.
-  for(i in 1:ncol(dataSet)){
-    lapply(dataSet[,i], function(x) x[is.na(x)] <- 0)
-  }
-    
-  
-  
-  
+    else {
+      # otherwise include NAs into factor levels and change factor levels:
+      x <- factor(x, exclude=NULL)
+      levels(x)[is.na(levels(x))] <- "Missing"
+    }
+    return(x)
+  })
   
   return(dataSet)
-} 
+}
+
+check_categorical_variables <- function(dataSet)
+{
+  print('************************************************')
+  print('Listing all variables with categorical values:')
+  count <- 0
+  for (i in 1:ncol(dataSet)) {
+    if (!is.numeric(dataSet[,i])) {
+      count <- count + 1
+      factor_names <- paste(levels(dataSet[,i]), sep=" ")
+      print (paste0(names(dataSet)[i], ' is categorical variable with number of factors: '))
+      print (factor_names)
+    }
+  }
+  print (paste0('Total categorical variables:' , count))
+  print('************************************************')
+}
+
+#
+# encoding categorical variables. If a variable has 3 levels --> we need 2 bit to encode
+#
+encode_categorical_variables <- function(dataSet)
+{
+  
+}
+
 deal_outliers <- function(dataSet)
 {
   
 }
+
 do_variable_selection <- function(dataSet)
 {
   
@@ -43,6 +78,20 @@ do_variable_selection <- function(dataSet)
 #do regression: variable selection + linear regression + xgboost + random forest
 # check the residuals
 # Mine: regression part + transformation 
-check_missing_values(data)
-data2 <- deal_missing_values(data)
-check_missing_values(data2)
+
+####################### 1. Dealing with missing values for training and testing data #################################################
+check_missing_values(HP.train)
+HP.train <- deal_missing_values(HP.train)
+print ('check missing values of the dataframe after replacing missing values. Should print blank')
+check_missing_values(HP.train)
+
+check_missing_values(HP.test)
+HP.test <- deal_missing_values(HP.test)
+print ('check missing values of the dataframe after replacing missing values. Should print blank')
+check_missing_values(HP.test)
+#************************************************************************************************************************************#
+check_categorical_variables(HP.train)
+encode_categorical_variables(HP.train)
+
+
+
