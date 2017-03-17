@@ -2,7 +2,8 @@ require(dplyr)
 
 HP.train <- read.csv('train.csv', sep = ',', header = TRUE)
 HP.test <- read.csv('test.csv', sep = ',', header = TRUE)
-
+HP.train$Id <- NULL
+HP.test$Id <- NULL
 check_missing_values <- function(dataSet)
 {
   for (i in seq(1,ncol(dataSet))) {
@@ -60,7 +61,25 @@ check_categorical_variables <- function(dataSet)
 #
 encode_categorical_variables <- function(dataSet)
 {
-  
+  dataSetTemp <- dataSet
+  for (i in 1:ncol(dataSet)){
+    if (is.factor(dataSet[,i])) {
+      col_name = names(dataSet)[i]
+      t <- model.matrix(~ factor(dataSet[,i]) - 1)
+      dataSetTemp <- cbind(t[,2:ncol(t)], dataSetTemp)
+      new_col_names <- paste(col_name, "_bit", seq(1, ncol(t) - 1))
+      names(dataSetTemp)[1:ncol(t) - 1] <- new_col_names
+    }
+  }
+  removed <- c()
+  for (i in 1:ncol(dataSetTemp)) {
+    if (is.factor(dataSetTemp[,i])) removed <- c(removed, i)
+  }
+  dataSetTemp <- dataSetTemp[, -removed]
+  # dataSetTemp <- lapply(dataSetTemp, function(x){
+  #   if (is.factor(x)) x <- NULL
+  # })
+  return(dataSetTemp)
 }
 
 deal_outliers <- function(dataSet)
@@ -91,7 +110,7 @@ print ('check missing values of the dataframe after replacing missing values. Sh
 check_missing_values(HP.test)
 #************************************************************************************************************************************#
 check_categorical_variables(HP.train)
-encode_categorical_variables(HP.train)
+HP.train <- encode_categorical_variables(HP.train)
 
 
 
