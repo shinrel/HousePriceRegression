@@ -14,7 +14,22 @@ check_missing_values <- function(dataSet)
     }
   }
 }
-
+check_categorical_variables <- function(dataSet)
+{
+  print('************************************************')
+  print('Listing all variables with categorical values:')
+  count <- 0
+  for (i in 1:ncol(dataSet)) {
+    if (!is.numeric(dataSet[,i])) {
+      count <- count + 1
+      factor_names <- paste(levels(dataSet[,i]), sep=" ")
+      print (paste0(names(dataSet)[i], ' is categorical variable with number of factors: '))
+      print (factor_names)
+    }
+  }
+  print (paste0('Total categorical variables:' , count))
+  print('************************************************')
+}
 
 deal_missing_values <- function(dataSet, type = 1)
 {
@@ -39,23 +54,6 @@ deal_missing_values <- function(dataSet, type = 1)
   return(dataSet)
 }
 
-check_categorical_variables <- function(dataSet)
-{
-  print('************************************************')
-  print('Listing all variables with categorical values:')
-  count <- 0
-  for (i in 1:ncol(dataSet)) {
-    if (!is.numeric(dataSet[,i])) {
-      count <- count + 1
-      factor_names <- paste(levels(dataSet[,i]), sep=" ")
-      print (paste0(names(dataSet)[i], ' is categorical variable with number of factors: '))
-      print (factor_names)
-    }
-  }
-  print (paste0('Total categorical variables:' , count))
-  print('************************************************')
-}
-
 #
 # encoding categorical variables. If a variable has 3 levels --> we need 2 bit to encode
 #
@@ -76,9 +74,6 @@ encode_categorical_variables <- function(dataSet)
     if (is.factor(dataSetTemp[,i])) removed <- c(removed, i)
   }
   dataSetTemp <- dataSetTemp[, -removed]
-  # dataSetTemp <- lapply(dataSetTemp, function(x){
-  #   if (is.factor(x)) x <- NULL
-  # })
   return(dataSetTemp)
 }
 
