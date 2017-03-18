@@ -4,6 +4,10 @@ HP.train <- read.csv('train.csv', sep = ',', header = TRUE)
 HP.test <- read.csv('test.csv', sep = ',', header = TRUE)
 HP.train$Id <- NULL
 HP.test$Id <- NULL
+HP.test$SalePrice <- replicate(nrow(HP.test), -1)
+ntrain <- nrow(HP.train)
+ntest <- nrow(HP.test)
+HP.all <- rbind(HP.train, HP.test)
 check_missing_values <- function(dataSet)
 {
   for (i in seq(1,ncol(dataSet))) {
@@ -31,7 +35,7 @@ check_categorical_variables <- function(dataSet)
   print('************************************************')
 }
 
-deal_missing_values <- function(dataSet, type = 1)
+deal_missing_values <- function(dataSet, ntrain = 1460, type = 1)
 {
   # type is the replace method for numeric values. 
   #if type = 1 --> using mean to replace.
@@ -40,8 +44,8 @@ deal_missing_values <- function(dataSet, type = 1)
     # check if variables have a factor:
     if(!is.factor(x)) {
       #replace NA by mean
-      if (type == 1) x[is.na(x)] <- mean(x, na.rm = TRUE) 
-      else if (type == 2) if (type == 1) x[is.na(x)] <- median(x, na.rm = TRUE) 
+      if (type == 1) x[is.na(x)] <- mean(x[1:1460], na.rm = TRUE) 
+      else if (type == 2) if (type == 1) x[is.na(x)] <- median(x[1:1460], na.rm = TRUE) 
     }
     else {
       # otherwise include NAs into factor levels and change factor levels:
@@ -57,7 +61,7 @@ deal_missing_values <- function(dataSet, type = 1)
 #
 # encoding categorical variables. If a variable has 3 levels --> we need 2 bit to encode
 #
-encode_categorical_variables <- function(dataSet)
+encode_categorical_variables <- function(dataSet, ntrain=1460)
 {
   dataSetTemp <- dataSet
   for (i in 1:ncol(dataSet)){
@@ -84,6 +88,12 @@ deal_outliers <- function(dataSet)
 
 do_variable_selection <- function(dataSet)
 {
+  #must return a dataframe in which important variables are kept.
+    
+}
+
+build_model <- function(dataSet)
+{
   
 }
 
@@ -94,18 +104,20 @@ do_variable_selection <- function(dataSet)
 # Mine: regression part + transformation 
 
 ####################### 1. Dealing with missing values for training and testing data #################################################
-check_missing_values(HP.train)
-HP.train <- deal_missing_values(HP.train)
+check_missing_values(HP.all)
+HP.all <- deal_missing_values(HP.all, ntrain)
 print ('check missing values of the dataframe after replacing missing values. Should print blank')
-check_missing_values(HP.train)
+check_missing_values(HP.all)
 
-check_missing_values(HP.test)
-HP.test <- deal_missing_values(HP.test)
-print ('check missing values of the dataframe after replacing missing values. Should print blank')
-check_missing_values(HP.test)
 #************************************************************************************************************************************#
+####################### 2. Encoding categorical variables ############################################################################
 check_categorical_variables(HP.train)
-HP.train <- encode_categorical_variables(HP.train)
-
+# HP.train <- encode_categorical_variables(HP.train)
+HP.all <- encode_categorical_variables(HP.all)
+print ('check categorical values of the dataframe after encoding. Should print blank')
+check_categorical_variables(HP.all)
+#************************************************************************************************************************************#
+HP.train = HP.all[1:ntrain,]
+HP.test = HP.all[(ntrain+1) : nrow(HP.all),]
 
 
