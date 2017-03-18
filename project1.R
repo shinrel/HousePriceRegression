@@ -1,6 +1,9 @@
 require(dplyr)
 library(stats)
 library(Metrics)
+library(glmnet)
+library(ggplot2)
+library(caret)
 HP.train <- read.csv('train.csv', sep = ',', header = TRUE)
 HP.test <- read.csv('test.csv', sep = ',', header = TRUE)
 HP.train$Id <- NULL
@@ -94,14 +97,38 @@ do_variable_selection <- function(dataSet)
     
 }
 
-build_model <- function(train)
+build_model <- function(train, type = 2)
 {
-  fit <- lm(SalePrice ~., train)
-  fit$rsquared <- summary(fit)$r.squared
-  fit$adj.rsquared <- summary(fit)$adj.r.squared
-  fit$predicted <- fit$fitted.values
+  if (type == 1) {
+    #multiple linear regression model
+    fit <- lm(SalePrice ~., train)  
+    fit$rsquared <- summary(fit)$r.squared
+    fit$adj.rsquared <- summary(fit)$adj.r.squared
+    fit$predicted <- fit$fitted.values
+    
+  }
+  if (type == 2) {
+    #add elastic net regularization to reduce model overfitting
+    # fit = cv.glmnet(x = as.matrix(train[,1:(ncol(train) - 1)]), y=as.matrix(train[,ncol(train)]), type.measure = "mse")
+    # plot(fit)
+    set.seed(1024)
+    fit = glmnet(x = as.matrix(train[,1:(ncol(train) - 1)]), y=as.matrix(train[,ncol(train)]), family="gaussian", alpha = 0.1, lambda = 0.1)
+    # plot(fit, xvar = "dev", label = TRUE)
+    # plot(fit)
+    # print(fit$lambda.min)
+    # print(fit$lambda.lse)
+    fit$predicted <- predict(fit, newx = as.matrix(train[,1:(ncol(train) - 1)]),  type="response", family="gaussian", standardize=TRUE)
+  }
+  if (type == 3) {
+    # random forest in here:
+    fit <- randomForest(x = as.matrix(train[,1:(ncol(train) - 1)]), y = as.matrix(train[,ncol(train)]), 
+                        ntree = 200, mtry = 100)
+    plot(fit)
+    # fit$predicted <- as.vector(fit$predicted)
+  }
   fit$actual <- train$SalePrice
   fit$rmse <- rmse(actual = fit$actual, predicted  = fit$predicted)
+  print(paste0('RMSE of training :',fit$rmse))
   return(fit)
 }
 
@@ -136,10 +163,18 @@ check_categorical_variables(HP.all)
 #************************************************************************************************************************************#
 HP.train = HP.all[1:ntrain,]
 HP.test = HP.all[(ntrain+1) : nrow(HP.all),]
+HP.test$SalePrice <- NULL
 
-HP.train.lr_model <- build_model(HP.train)
-HP.test$SalePrice <- predict(HP.train.lr_model, HP.test)
+print ('Building multiple linear regression model')
+HP.train.lr_model <- build_model(HP.train, type = 1)
+print ('Building glmnet model')
+HP.train.glmnet_model <- build_model(HP.train, type = 2)
+print ('Building random forest model')
+HP.train.rf_model <- build_model(HP.train, type = 3)
+
+print('Choosing?')
+HP.test$SalePrice <- predict(HP.train.rf_model, as.matrix(HP.test))
 
 submission <- data.frame(Id <- HP.test.Id, SalePrice <- HP.test$SalePrice)
 names(submission) <- c('Id', 'SalePrice')
-write.csv(file = 'submission.csv', x = submission, row.names = FALSE, col.names = TRUE)
+write.csv(file = 'submission.csv', x = submission, row.names = FALSE)
