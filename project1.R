@@ -1,8 +1,10 @@
 require(dplyr)
-
+library(stats)
+library(Metrics)
 HP.train <- read.csv('train.csv', sep = ',', header = TRUE)
 HP.test <- read.csv('test.csv', sep = ',', header = TRUE)
 HP.train$Id <- NULL
+HP.test.Id <- HP.test$Id
 HP.test$Id <- NULL
 HP.test$SalePrice <- replicate(nrow(HP.test), -1)
 ntrain <- nrow(HP.train)
@@ -92,10 +94,25 @@ do_variable_selection <- function(dataSet)
     
 }
 
-build_model <- function(dataSet)
+build_model <- function(train)
 {
+  fit <- lm(SalePrice ~., train)
+  fit$rsquared <- summary(fit)$r.squared
+  fit$adj.rsquared <- summary(fit)$adj.r.squared
+  fit$predicted <- fit$fitted.values
+  fit$actual <- train$SalePrice
+  fit$rmse <- rmse(actual = fit$actual, predicted  = fit$predicted)
+  return(fit)
+}
+
+evaluate_model <- function(model, test)
+{
+  eval.predicted <- predict(model, data=test)
+  eval.actual <- test$SalePrice
+  eval.RMSE <- rmse(actual = eval.actual, predicted = eval.predicted)
   
 }
+
 
 #missing values: categorical + numeric values. Numeric values can be replaced by mean, median for ease.
 #outliers: do later.
@@ -120,4 +137,9 @@ check_categorical_variables(HP.all)
 HP.train = HP.all[1:ntrain,]
 HP.test = HP.all[(ntrain+1) : nrow(HP.all),]
 
+HP.train.lr_model <- build_model(HP.train)
+HP.test$SalePrice <- predict(HP.train.lr_model, HP.test)
 
+submission <- data.frame(Id <- HP.test.Id, SalePrice <- HP.test$SalePrice)
+names(submission) <- c('Id', 'SalePrice')
+write.csv(file = 'submission.csv', x = submission, row.names = FALSE, col.names = TRUE)
