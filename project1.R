@@ -131,7 +131,18 @@ build_model <- function(train, type = 2)
   print(paste0('RMSE of training :',fit$rmse))
   return(fit)
 }
-
+do_transform <- function(dataSet)
+{
+  for (i in 1:(ncol(dataSet) - 1) ) {
+    if (min(dataSet[,i]) == 0 && max(dataSet[,i]) == 1 ) {
+      #categorical values --> do nothing
+    } else{
+      dataSet[,i] <- log(dataSet[,i] + 1)
+    }
+  }
+  return(dataSet)
+  
+}
 evaluate_model <- function(model, test)
 {
   eval.predicted <- predict(model, data=test)
@@ -161,9 +172,14 @@ HP.all <- encode_categorical_variables(HP.all)
 print ('check categorical values of the dataframe after encoding. Should print blank')
 check_categorical_variables(HP.all)
 #************************************************************************************************************************************#
+#do transformation on variables?
+HP.all <- do_transform(HP.all)
+
+
 HP.train = HP.all[1:ntrain,]
 HP.test = HP.all[(ntrain+1) : nrow(HP.all),]
 HP.test$SalePrice <- NULL
+
 
 print ('Building multiple linear regression model')
 HP.train.lr_model <- build_model(HP.train, type = 1)
@@ -175,6 +191,7 @@ HP.train.rf_model <- build_model(HP.train, type = 3)
 print('Choosing?')
 HP.test$SalePrice <- predict(HP.train.rf_model, as.matrix(HP.test))
 
+#write to file
 submission <- data.frame(Id <- HP.test.Id, SalePrice <- HP.test$SalePrice)
 names(submission) <- c('Id', 'SalePrice')
 write.csv(file = 'submission.csv', x = submission, row.names = FALSE)
